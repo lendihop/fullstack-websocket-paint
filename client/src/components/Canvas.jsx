@@ -7,6 +7,7 @@ import Brush from "../tools/Brush";
 import {Button, Modal} from "react-bootstrap";
 import {useParams} from "react-router-dom";
 import Rect from "../tools/Rect";
+import axios from "axios";
 
 const Canvas = observer(() => {
     const canvasRef = useRef();
@@ -15,7 +16,20 @@ const Canvas = observer(() => {
     const [showModal, setShowModal] = useState(true);
     const {id} = useParams();
 
-    useEffect(() => canvasState.setCanvas(canvasRef.current), []);
+    useEffect(() => {
+        canvasState.setCanvas(canvasRef.current);
+        let ctx = canvasRef.current.getContext('2d');
+        axios.get(`http://localhost:3001/image?id=${id}`)
+            .then(response => {
+                const img = new Image();
+                img.src = response.data;
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
+                    ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.height)
+                };
+            })
+            .catch(e => console.log(e));
+        }, []);
 
     useEffect(() => {
         if (canvasState.username) {
@@ -45,7 +59,11 @@ const Canvas = observer(() => {
         }
     }, [canvasState.username]);
 
-    const mouseDownHandler = () => canvasState.pushToUndo(canvasRef.current.toDataURL());
+    const mouseDownHandler = () => {
+        canvasState.pushToUndo(canvasRef.current.toDataURL());
+        axios.post(`http://localhost:3001/image?id=${id}`, {img: canvasRef.current.toDataURL()})
+            .then(response => console.log(response.data));
+    };
 
     const connectionHandler = () => {
         canvasState.setUsername(usernameRef.current.value);
